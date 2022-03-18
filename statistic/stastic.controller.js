@@ -5,15 +5,12 @@ const validateRequest = require("_middleware/validate-request");
 const authorize = require("_middleware/authorize");
 const Role = require("_helpers/role");
 const roomService = require("./room.service");
-const statisticService = require("../statistic/statistic.service");
 const { findOne } = require("./room.model");
-const statisticModel = require("../statistic/statistic.model");
-const { io } = require("../io");
 
 // routes
-router.post("/createroom", createRoom);
-router.post("/joinroom", joinRoom);
-router.post("/exitroom", exitRoom);
+router.post("/createroom", authorize(), createRoom);
+router.post("/joinroom", authorize(), joinRoom);
+router.post("/exitroom", authorize(), exitRoom);
 // router.post('/verify-email', verifyEmailSchema, verifyEmail);
 // router.post('/forgot-password', forgotPasswordSchema, forgotPassword);
 // router.post('/validate-reset-token', validateResetTokenSchema, validateResetToken);
@@ -126,27 +123,7 @@ function createRoom(req, res, next) {
         .io()
         .on("connection", (socket) => {
           socket.join(result.roomId);
-          socket.on("disconnecting", (reason) => {
-            console.log("Create");
-            console.log(socket.id);
-            console.log(socket.rooms);
-            for (const room of socket.rooms) {
-              if (room !== socket.id) {
-                socket.to(room).emit("user has left", socket.id);
-                socket.leave(room);
-              } else {
-                socket.leave(room);
-              }
-            }
-          });
         });
-      const obj = {
-        roomId: result.roomId,
-        playerId: result.playerIds[0],
-        roomType: req.body.roomType,
-        amount: req.body.amount,
-      };
-      statisticService.createStatistic(obj, req.get("origin"));
 
       res.json({
         status: "200",
@@ -170,34 +147,11 @@ function joinRoom(req, res, next) {
         require("../io")
           .io()
           .on("connection", (socket) => {
-            socket.join(result.roomId);
+            socket.join(result.roomId, req.body.playerId);
             socket
               .to(result.roomId)
-              .emit("message", "${req.body.playerId} has Joined the Game");
-
-            socket.on("disconnecting", (reason) => {
-              console.log("Join");
-              console.log(socket.id);
-              console.log(socket.rooms);
-              for (const room of socket.rooms) {
-                if (room !== socket.id) {
-                  socket.to(room).emit("user has left", socket.id);
-                  socket.leave(room);
-                } else {
-                  socket.leave(room);
-                }
-              }
-            });
+              .broadcast("message", `${req.body.playerId} has Joined the Game`);
           });
-
-        const obj = {
-          roomId: req.body.roomId,
-          playerId: req.body.playerId,
-          roomType: req.body.roomType,
-          amount: result.amount,
-        };
-        statisticService.createStatistic(obj, req.get("origin"));
-
         res.json({
           status: "200",
           message: "Room Joined successfully",
@@ -216,9 +170,9 @@ function exitRoom(req, res, next) {
         .io()
         .on("connection", (socket) => {
           socket.join(result.roomId, req.body.playerId);
-          // socket
-          //   .to(result.roomId)
-          //   .broadcast("message", `${req.body.playerId} has Joined the Game`);
+          socket
+            .to(result.roomId)
+            .broadcast("message", `${req.body.playerId} has Joined the Game`);
         });
       res.json({
         status: "200",

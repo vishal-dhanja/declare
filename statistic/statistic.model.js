@@ -3,14 +3,12 @@ const Schema = mongoose.Schema;
 const autoIncrement = require("mongoose-auto-increment");
 
 const schema = new Schema({
-  playerId: { type: Number, unique: true, required: true },
-  loginType: { type: String, required: true },
-  isNewUser: { type: Boolean },
-  fbUserId: { type: String },
-  fbUserToken: { type: String },
-  playerName: { type: String },
-  profilePictureId: { type: String },
-  chips: { type: Number, default: 1000 },
+  roomId: { type: Number, required: true },
+  playerId: { type: Number, required: true },
+  amount: { type: Number, required: true },
+  roomType: { type: Number, required: true },
+  isWin: { type: Boolean, default: false },
+  winningAmount: { type: Number, default: 0 },
   created: { type: Date, default: Date.now },
   updated: Date,
 });
@@ -28,10 +26,4 @@ schema.set("toJSON", {
     delete ret.passwordHash;
   },
 });
-autoIncrement.initialize(mongoose.connection);
-schema.plugin(autoIncrement.plugin, {
-  model: "Account",
-  field: "playerId",
-});
-
-module.exports = mongoose.model("Account", schema);
+module.exports = mongoose.model("Statistic", schema);

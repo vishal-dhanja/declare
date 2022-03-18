@@ -1,4 +1,4 @@
-﻿const config = require("config.json");
+const config = require("config.json");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
@@ -12,7 +12,10 @@ module.exports = {
   refreshToken,
   revokeToken,
   register,
-  allocateRoom,
+  createStatistic,
+  joinStatistic,
+  joinRoom,
+  exitRoom,
   // verifyEmail,
   // forgotPassword,
   // validateResetToken,
@@ -85,31 +88,21 @@ async function revokeToken({ token, ipAddress }) {
 
 async function register(params, origin) {
   // validate
-  if (params.loginType === "0" && !params.isNewUser) {
+  if (params.loginType === "0" && !params.isNew) {
     const data = await db.Account.findOne({ playerId: params.playerId });
     if (data) {
-      data.token = generateJwtToken(data);
       return display(data);
     }
   } else if (params.loginType === "1") {
     const data = await db.Account.findOne({ fbUserId: params.fbUserId });
     if (data) {
       // send already registered error in email to prevent account enumeration
-      data.token = generateJwtToken(data);
+
       return display(data);
     }
   }
   // create account object
-  console.log(params);
   const account = new db.Account(params);
-
-  // first registered account is an admin
-  // const isFirstAccount = (await db.Account.countDocuments({})) === 0;
-  // account.role = isFirstAccount ? Role.Admin : Role.User;
-  // account.verificationToken = randomTokenString();
-
-  // // hash password
-  // account.passwordHash = hash(params.password);
 
   // save account
 
@@ -120,34 +113,66 @@ async function register(params, origin) {
   // await sendVerificationEmail(account, origin);
 }
 
-async function allocateRoom(params, origin) {
-  if (!params.playerId) {
+async function createStatistic(params, origin) {
+  const statistic = new db.Statistic(params);
+  await statistic.save();
+}
+
+async function joinStatistic(params, origin) {
+  const statistic = new db.Statistic(params);
+  console.log(statistic);
+  //   const result = await statistic.save();
+  //   return display(result);
+}
+
+function display(state) {
+  return {
+    RoomID: state.roomId,
+    PlayerIDs: state.playerIds,
+    Amount: state.amount,
+    MatchType: state.matchType,
+  };
+}
+
+async function joinRoom(params, origin) {
+  if (!params.roomId) {
     return {
-      error: "Please provide player Id!",
+      message: "Please provide valid room Id!",
     };
   }
-  const result = await account.save();
-  result.token = generateJwtToken(result);
-  return display(result);
+  const room = await db.Room.findOne({ roomId: params.roomId });
+  if (room.roomId !== params.roomId || room.matchType !== params.matchType) {
+    return {
+      message: "Room or Match type is not matching..!",
+    };
+  }
+
+  if (room["playerIds"].length < 4) {
+    room["playerIds"].push(params.playerId);
+
+    Object.assign(room, params);
+    room.updated = Date.now();
+    await room.save();
+    return display(room);
+  } else {
+    return {
+      message: "Maximum 4 players played the game!",
+    };
+  }
 }
-function display(account) {
-  return {
-    playerID: account.playerId,
-    loginType: account.loginType,
-    isNewUser: account.isNewUser,
-    fbUserId: account.fbUserId,
-    fbUserToken: account.fbUserToken,
-    playerName: account.playerName,
-    profilePictureId: account.profilePictureId,
-    chips: account.chips,
-    friendsMatchPlayed: "",
-    friendsMatchWin: "",
-    multiplayerMatchPlayed: "",
-    multiplayerMatchWin: "",
-    offlineMatchPlayed: "",
-    offlineMatchWin: "",
-    token: account.token,
-  };
+
+async function exitRoom(params, origin) {
+  const room = await db.Room.findOne({ roomId: params.roomId });
+
+  const index = room.playerIds.findIndex((c) => c === params.playerId);
+
+  if (index !== -1) {
+    room.playerIds.splice(index, 1);
+  }
+  Object.assign(room, room.playerIds);
+  room.updated = Date.now();
+  await room.save();
+  return display(room);
 }
 
 // async function verifyEmail({ token }) {
@@ -218,7 +243,6 @@ async function getPlayerDetail(id) {
 }
 
 async function getAccount(id) {
-  console.log(id);
   const account = await db.Account.findById(id);
   if (!account) throw "Account not found";
   return account;
@@ -228,7 +252,6 @@ function basicDetails(account) {
   const {
     playerId,
     loginType,
-    isNewUser,
     fbUserId,
     fbUserToken,
     playerName,
@@ -244,7 +267,6 @@ function basicDetails(account) {
   return {
     playerId,
     loginType,
-    isNewUser,
     fbUserId,
     fbUserToken,
     playerName,
@@ -277,29 +299,31 @@ async function create(params) {
   return basicDetails(account);
 }
 
-async function update(id, params) {
-  const account = await getAccount(id);
+async function update(params) {
+  const room = await getAccount(params.roomId);
 
   // validate (if email was changed)
-  if (
-    params.email &&
-    account.email !== params.email &&
-    (await db.Account.findOne({ email: params.email }))
-  ) {
-    throw 'Email "' + params.email + '" is already taken';
-  }
+  //   if (
+  //     params.email &&
+  //     account.email !== params.email &&
+  //     (await db.Account.findOne({ email: params.email }))
+  //   ) {
+  //     throw 'Email "' + params.email + '" is already taken';
+  //   }
 
-  // hash password if it was entered
-  if (params.password) {
-    params.passwordHash = hash(params.password);
-  }
+  //   // hash password if it was entered
+  //   if (params.password) {
+  //     params.passwordHash = hash(params.password);
+  //   }
 
   // copy params to account and save
-  Object.assign(account, params);
-  account.updated = Date.now();
-  await account.save();
+  console.log(room["playerIds"].push(params.playerId));
 
-  return basicDetails(account);
+  Object.assign(room, params);
+  room.updated = Date.now();
+  await room.save();
+
+  return display(room);
 }
 
 async function _delete(id) {
@@ -324,7 +348,7 @@ function hash(password) {
 function generateJwtToken(account) {
   // create a jwt token containing the account id that expires in 15 minutes
   return jwt.sign({ sub: account.id, id: account.id }, config.secret, {
-    expiresIn: "8h",
+    expiresIn: "15m",
   });
 }
 

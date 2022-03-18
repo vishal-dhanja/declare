@@ -1,44 +1,88 @@
-﻿require('rootpath')();
-const express = require('express');
+﻿require("rootpath")();
+const express = require("express");
 const app = express();
-const http = require('http')
-const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
-const errorHandler = require('_middleware/error-handler');
-const socketio = require('socket.io');
-
-const server = http.createServer(app);
-const io = socketio(server);
+const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
+const errorHandler = require("_middleware/error-handler");
+const { createRoom, joinRoom } = require("./room/room.service");
+var server = require("http").createServer(app);
+var io = require("./io").initialize(server);
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
 // allow cors requests from any origin and with credentials
-app.use(cors({ origin: (origin, callback) => callback(null, true), credentials: true }));
+app.use(
+  cors({
+    origin: (origin, callback) => callback(null, true),
+    credentials: true,
+  })
+);
 
 // api routes
-app.use('/accounts', require('./accounts/accounts.controller'));
-app.use('/room', require('./room/room.controller'));
+app.use("/accounts", require("./accounts/accounts.controller"));
+app.use("/room", require("./room/room.controller"));
 
 // swagger docs route
-app.use('/api-docs', require('_helpers/swagger'));
+app.use("/api-docs", require("_helpers/swagger"));
 
 // global error handler
 app.use(errorHandler);
 
-io.on('connection', (socket) => {
-    console.log('Connection Established');
-
-    socket.on('join', ({ playerId, room }) => {
-        socket.join(room);
-        io.to(room).emit('message', message);
-    })
-})
+// require('./room/room.controller.js');
 
 // start server
-const port = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
+const port =
+  process.env.NODE_ENV === "production" ? process.env.PORT || 80 : 4000;
 server.listen(port, () => {
-    console.log('Server listening on port ' + port);
+  console.log("Server listening on port " + port);
+});
+
+io.on("connection", async (socket) => {
+  socket.on("roomCreate", async (room) => {
+    console.log(room);
+    const res = await createRoom(JSON.parse(room));
+    socket.join(res.roomId);
+    console.log(socket.id);
+    socket.emit("roomCreated", JSON.stringify(res));
+    socket.on("disconnecting", (reason, res) => {
+      console.log("Create");
+      console.log(res);
+      console.log(socket.id);
+      console.log(socket.rooms);
+      for (const room of socket.rooms) {
+        if (room !== socket.id) {
+          socket.to(room).emit("user has left", socket.id);
+          socket.leave(room);
+        }
+      }
+    });
+  });
+  socket.on("roomJoin", async (room) => {
+    room = JSON.parse(room);
+    const res = await joinRoom(room);
+    socket.join(res.roomId);
+    console.log(socket.id);
+    socket
+      .to(res.roomId)
+      .emit(
+        "newMemberJoined",
+        `A new player (${room.playerId}) has Joined the Game`
+      );
+    socket.emit("playerJoined", JSON.stringify(res));
+    socket.on("disconnecting", (reason, res) => {
+      console.log("Jion");
+      console.log(res);
+      console.log(socket.id);
+      console.log(socket.rooms);
+      for (const room of socket.rooms) {
+        if (room !== socket.id) {
+          socket.to(room).emit("user has left", socket.id);
+          socket.leave(room);
+        }
+      }
+    });
+  });
 });

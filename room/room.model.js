@@ -3,9 +3,9 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const autoIncrement = require("mongoose-auto-increment");
 
-const schema = new Schema({
-  roomId: { type: Number, unique: true, required: true, default: 1000 },
+const schema = new Schema({  
   playerIds: [{ type: Number, required: true }],
+  roomId: { type: Number, default: 100 },
   roomType: { type: Number, required: true },
   amount: { type: Number, required: true },
   created: { type: Date, default: Date.now },

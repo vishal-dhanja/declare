@@ -11,6 +11,7 @@ const schema = new Schema({
   playerName: { type: String },
   profilePictureId: { type: String },
   chips: { type: Number, default: 1000 },
+  level: { type: Number, default: 1 },
   created: { type: Date, default: Date.now },
   updated: Date,
 });

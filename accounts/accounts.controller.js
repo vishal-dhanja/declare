@@ -113,7 +113,6 @@ function registerSchema(req, res, next) {
   });
 
   validateRequest(req, next, schema);
-  console.log(req.body);
 }
 
 function register(req, res, next) {

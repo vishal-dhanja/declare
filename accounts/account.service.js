@@ -100,18 +100,7 @@ async function register(params, origin) {
     }
   }
   // create account object
-  console.log(params);
   const account = new db.Account(params);
-
-  // first registered account is an admin
-  // const isFirstAccount = (await db.Account.countDocuments({})) === 0;
-  // account.role = isFirstAccount ? Role.Admin : Role.User;
-  // account.verificationToken = randomTokenString();
-
-  // // hash password
-  // account.passwordHash = hash(params.password);
-
-  // save account
 
   const result = await account.save();
   result.token = generateJwtToken(result);
@@ -132,7 +121,7 @@ async function allocateRoom(params, origin) {
 }
 function display(account) {
   return {
-    playerID: account.playerId,
+    playerId: account.playerId,
     loginType: account.loginType,
     isNewUser: account.isNewUser,
     fbUserId: account.fbUserId,
@@ -140,6 +129,7 @@ function display(account) {
     playerName: account.playerName,
     profilePictureId: account.profilePictureId,
     chips: account.chips,
+    level: account.level,
     friendsMatchPlayed: "",
     friendsMatchWin: "",
     multiplayerMatchPlayed: "",

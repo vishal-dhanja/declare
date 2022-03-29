@@ -19,12 +19,13 @@ module.exports = router;
 
 function createRoom(req, res, next) {
   roomService
-    .createRoom(req.body, req.get("origin"))
+    .createRoom(req.body, "Updated Socket", req.get("origin"))
     .then((result) => {
       require("../io")
         .io()
         .on("connection", (socket) => {
-          socket.join(result.roomId);
+          socket.join(result.roomId);          
+          console.log(socket.id);
           socket.on("disconnecting", (reason) => {
             console.log("Create");
             console.log(socket.id);
@@ -46,7 +47,6 @@ function createRoom(req, res, next) {
         amount: req.body.amount,
       };
       statisticService.createStatistic(obj, req.get("origin"));
-
       res.json({
         status: "200",
         message: "Room Allocated successfully",
@@ -58,7 +58,7 @@ function createRoom(req, res, next) {
 
 function joinRoom(req, res, next) {
   roomService
-    .joinRoom(req.body, req.get("origin"))
+    .joinRoom(req.body, "Joining", req.get("origin"))
     .then((result) => {
       if (result.message) {
         res.json({

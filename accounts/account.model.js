@@ -5,6 +5,7 @@ const autoIncrement = require("mongoose-auto-increment");
 const schema = new Schema({
   playerId: { type: Number, unique: true, required: true },
   loginType: { type: String, required: true },
+  socketId: { type: String },
   isNewUser: { type: Boolean },
   fbUserId: { type: String },
   fbUserToken: { type: String },

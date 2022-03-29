@@ -5,7 +5,7 @@ const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const errorHandler = require("_middleware/error-handler");
-const { createRoom, joinRoom } = require("./room/room.service");
+const { createRoom, joinRoom, exitRoom } = require("./room/room.service");
 var server = require("http").createServer(app);
 var io = require("./io").initialize(server);
 
@@ -43,10 +43,10 @@ server.listen(port, () => {
 io.on("connection", async (socket) => {
   socket.on("roomCreate", async (room) => {
     console.log(room);
-    const res = await createRoom(JSON.parse(room));
+    const res = await createRoom(JSON.parse(room), socket.id);
     socket.join(res.roomId);
-    console.log(socket.id);
-    socket.emit("roomCreated", JSON.stringify(res));
+    // const account = await db.Account.findOne({ socketId });
+    socket.emit("roomCreated", JSON.stringify(res), JSON.stringify(account));
     socket.on("disconnecting", (reason, res) => {
       console.log("Create");
       console.log(res);
@@ -54,6 +54,7 @@ io.on("connection", async (socket) => {
       console.log(socket.rooms);
       for (const room of socket.rooms) {
         if (room !== socket.id) {
+          exitRoom(socket.id);
           socket.to(room).emit("user has left", socket.id);
           socket.leave(room);
         }
@@ -62,7 +63,7 @@ io.on("connection", async (socket) => {
   });
   socket.on("roomJoin", async (room) => {
     room = JSON.parse(room);
-    const res = await joinRoom(room);
+    const res = await joinRoom(room, socket.id);
     socket.join(res.roomId);
     console.log(socket.id);
     socket
@@ -79,6 +80,7 @@ io.on("connection", async (socket) => {
       console.log(socket.rooms);
       for (const room of socket.rooms) {
         if (room !== socket.id) {
+          const res = exitRoom(socket.id);
           socket.to(room).emit("user has left", socket.id);
           socket.leave(room);
         }

@@ -13,7 +13,7 @@ module.exports = {
   exitRoom,
 };
 
-async function createRoom(params) {
+async function createRoom(params, socketId) {
   if (!params.playerId) {
     return {
       error: "Please provide player Id!",
@@ -22,10 +22,15 @@ async function createRoom(params) {
   // const account = await db.Account.findOne(params.playerId);
   // const chip = account.chips - params.amount;
   // console.log(chip);
+  const account = await db.Account.findOne({ playerId: params.playerId });
+  account.socketId = socketId;
+  await account.save();
+
   const objParams = params;
   objParams["playerIds"] = [params.playerId];
   delete objParams.playerId;
   const room = new db.Room(objParams);
+  room.hostId = room.playerIds[0];
   const result = await room.save();
   return display(result);
 }
@@ -33,13 +38,14 @@ function display(room) {
   return {
     
     playerIds: room.playerIds,
+    hostId: room.hostId,
     roomId: room.roomId,
     roomType: room.roomType,
     amount: room.amount,
   };
 }
 
-async function joinRoom(params) {
+async function joinRoom(params, socketId) {
   if (!params.roomId) {
     return {
       message: "Please provide valid room Id!",
@@ -53,6 +59,10 @@ async function joinRoom(params) {
   }
 
   if (room["playerIds"].length < 4) {
+    const account = await db.Account.findOne({ playerId: params.playerId });
+    account.socketId = socketId;
+    await account.save();
+
     room["playerIds"].push(params.playerId);
 
     Object.assign(room, params);
@@ -67,15 +77,18 @@ async function joinRoom(params) {
 }
 
 async function exitRoom(params, origin) {
-  const room = await db.Room.findOne({ roomId: params.roomId });
+  
+  const account = await db.Account.findOne({ socketId: params.socketId });
 
-  const index = room.playerIds.findIndex((c) => c === params.playerId);
-
+  const room = await db.Room.findOne({ playerIds: account.playerId });
+  const index = room.playerIds.findIndex((c) => c === account.playerId);
   if (index !== -1) {
     room.playerIds.splice(index, 1);
   }
+
   Object.assign(room, room.playerIds);
   room.updated = Date.now();
+  room.hostId = room.playerIds[0];
   await room.save();
   return display(room);
 }

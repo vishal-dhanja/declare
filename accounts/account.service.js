@@ -91,14 +91,16 @@ async function register(params, origin) {
       data.token = generateJwtToken(data);
       return display(data);
     }
-  } else if (params.loginType === "1") {
-    const data = await db.Account.findOne({ fbUserId: params.fbUserId });
-    if (data) {
-      // send already registered error in email to prevent account enumeration
-      data.token = generateJwtToken(data);
-      return display(data);
-    }
   }
+  // } else if (params.loginType === "1") {
+  //   const data = await db.Account.findOne({ fbUserId: params.fbUserId });
+  //   if (data) {
+  //     console.log(data);
+  //     // send already registered error in email to prevent account enumeration
+  //     data.token = generateJwtToken(data);
+  //     return display(data);
+  //   }
+  // }
   // create account object
   const account = new db.Account(params);
 

@@ -77,11 +77,10 @@ async function joinRoom(params, socketId) {
 }
 
 async function exitRoom(params, origin) {
-  
-  const account = await db.Account.findOne({ socketId: params.socketId });
-
+  const account = await db.Account.findOne({ socketId: params });
   const room = await db.Room.findOne({ playerIds: account.playerId });
   const index = room.playerIds.findIndex((c) => c === account.playerId);
+
   if (index !== -1) {
     room.playerIds.splice(index, 1);
   }

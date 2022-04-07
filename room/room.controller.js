@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Joi = require("joi");
+const db = require("_helpers/db");
 const validateRequest = require("_middleware/validate-request");
 const authorize = require("_middleware/authorize");
 const Role = require("_helpers/role");
@@ -110,15 +111,9 @@ function joinRoom(req, res, next) {
 function exitRoom(req, res, next) {
   roomService
     .exitRoom(req.body, req.get("origin"))
-    .then((result) => {
-      require("../io")
-        .io()
-        .on("connection", (socket) => {
-          socket.join(result.roomId, req.body.playerId);
-          // socket
-          //   .to(result.roomId)
-          //   .broadcast("message", `${req.body.playerId} has Joined the Game`);
-        });
+    .then(async (result) => {
+      const account = await db.Account.findOne({ socketId: req.body });
+      console.log(account)
       res.json({
         status: "200",
         message: "Exit From Room",

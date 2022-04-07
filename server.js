@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const errorHandler = require("_middleware/error-handler");
 const { createRoom, joinRoom, exitRoom } = require("./room/room.service");
+const db = require("_helpers/db");
 var server = require("http").createServer(app);
 var io = require("./io").initialize(server);
 
@@ -42,20 +43,17 @@ server.listen(port, () => {
 
 io.on("connection", async (socket) => {
   socket.on("roomCreate", async (room) => {
-    console.log(room);
     const res = await createRoom(JSON.parse(room), socket.id);
     socket.join(res.roomId);
-    // const account = await db.Account.findOne({ socketId });
-    socket.emit("roomCreated", JSON.stringify(res), JSON.stringify(account));
-    socket.on("disconnecting", (reason, res) => {
-      console.log("Create");
-      console.log(res);
-      console.log(socket.id);
-      console.log(socket.rooms);
+    const account = await db.Account.findOne({ socketId : socket.id });
+    socket.emit("roomCreated", JSON.stringify(res));
+    socket.emit("newMember", JSON.stringify(account));
+    socket.on("disconnecting", async (reason, res) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {
-          exitRoom(socket.id);
-          socket.to(room).emit("user has left", socket.id);
+          const account = await db.Account.findOne({ socketId : socket.id });
+          const res = await exitRoom(socket.id);
+          socket.to(room).emit("user has left", `(${account.playerId}) has left the Game`);
           socket.leave(room);
         }
       }
@@ -65,23 +63,27 @@ io.on("connection", async (socket) => {
     room = JSON.parse(room);
     const res = await joinRoom(room, socket.id);
     socket.join(res.roomId);
-    console.log(socket.id);
+    const account = await db.Account.findOne({ playerId : room.playerId });
     socket
       .to(res.roomId)
       .emit(
         "newMemberJoined",
-        `A new player (${room.playerId}) has Joined the Game`
+        `A new player (${account.playerName}) has Joined the Game`
       );
     socket.emit("playerJoined", JSON.stringify(res));
-    socket.on("disconnecting", (reason, res) => {
-      console.log("Jion");
-      console.log(res);
-      console.log(socket.id);
-      console.log(socket.rooms);
+
+    for(const id of res.playerIds){
+      const account = await db.Account.findOne({ playerId : id });
+      console.log(account);
+      socket.emit("newMember", JSON.stringify(account));
+    }
+
+    socket.on("disconnecting", async (reason, res) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {
-          const res = exitRoom(socket.id);
-          socket.to(room).emit("user has left", socket.id);
+          const account = await db.Account.findOne({ socketId : socket.id });
+          const res = await exitRoom(socket.id);
+          socket.to(room).emit("user has left", `(${account.playerId}) has left the Game`);
           socket.leave(room);
         }
       }

@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const db = require("_helpers/db");
 const Role = require("_helpers/role");
 const { nextTick } = require("process");
+const { stringify } = require("querystring");
 
 module.exports = {
   createRoom,
@@ -68,6 +69,12 @@ async function joinRoom(params, socketId) {
     Object.assign(room, params);
     room.updated = Date.now();
     await room.save();
+
+    // const users = await db.Account.find({'playerId': {$in: room["playerIds"]}}, '-_id playerId playerName profilePictureId');
+    // // Object.assign(...users); 
+    // console.log(users);
+    // console.log(JSON.stringify(Object.assign({}, users)));
+
     return display(room);
   } else {
     return {

@@ -46,14 +46,14 @@ io.on("connection", async (socket) => {
     const res = await createRoom(JSON.parse(room), socket.id);
     socket.join(res.roomId);
     const account = await db.Account.findOne({ socketId : socket.id });
-    socket.emit("roomCreated", JSON.stringify(res));
-    socket.emit("newMember", JSON.stringify(account));
+    io.to(res.roomId).emit("roomCreated", JSON.stringify(res));
+    io.to(res.roomId).emit("newMember", JSON.stringify(account));
     socket.on("disconnecting", async (reason, res) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {
           const account = await db.Account.findOne({ socketId : socket.id });
           const res = await exitRoom(socket.id);
-          socket.to(room).emit("user has left", `(${account.playerId}) has left the Game`);
+          io.to(room).emit("user has left", `(${account.playerId}) has left the Game`);
           socket.leave(room);
         }
       }
@@ -64,26 +64,31 @@ io.on("connection", async (socket) => {
     const res = await joinRoom(room, socket.id);
     socket.join(res.roomId);
     const account = await db.Account.findOne({ playerId : room.playerId });
-    socket
-      .to(res.roomId)
+    socket.broadcast
       .emit(
         "newMemberJoined",
         `A new player (${account.playerName}) has Joined the Game`
       );
-    socket.emit("playerJoined", JSON.stringify(res));
+    
+    console.log(account);
+    const users = await db.Account.find({'playerId': {$in: res["playerIds"]}}, '-_id playerId playerName profilePictureId');
+    console.log(users);
+    
+    socket.broadcast.emit("newMember", JSON.stringify(account));
+    io.to(socket.id).emit("playerJoined", JSON.stringify(users));
 
-    for(const id of res.playerIds){
-      const account = await db.Account.findOne({ playerId : id });
-      console.log(account);
-      socket.emit("newMember", JSON.stringify(account));
-    }
+    // for(const id of res.playerIds){
+    //   const account = await db.Account.findOne({ playerId : id });
+    //   console.log(account);
+    //   io.to(res.roomId).emit("newMember", JSON.stringify(account));
+    // }
 
     socket.on("disconnecting", async (reason, res) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {
           const account = await db.Account.findOne({ socketId : socket.id });
           const res = await exitRoom(socket.id);
-          socket.to(room).emit("user has left", `(${account.playerId}) has left the Game`);
+          io.to(room).emit("user has left", `(${account.playerId}) has left the Game`);
           socket.leave(room);
         }
       }

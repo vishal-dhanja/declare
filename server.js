@@ -71,17 +71,18 @@ io.on("connection", async (socket) => {
       );
     
     console.log(account);
-    const users = await db.Account.find({'playerId': {$in: res["playerIds"]}}, '-_id playerId playerName profilePictureId');
-    console.log(users);
+    const users = await db.Account.find({'playerId': {$in: res["playerIds"]}});
     
+    const obj = {
+      "joinedPlayers": users,
+      "hostId": res.hostId,
+      "roomId": res.roomId,
+      "roomType": res.roomType,
+      "amount": res.amount
+    }
+    console.log(obj);
     socket.broadcast.emit("newMember", JSON.stringify(account));
-    io.to(socket.id).emit("playerJoined", JSON.stringify(users));
-
-    // for(const id of res.playerIds){
-    //   const account = await db.Account.findOne({ playerId : id });
-    //   console.log(account);
-    //   io.to(res.roomId).emit("newMember", JSON.stringify(account));
-    // }
+    io.to(socket.id).emit("playerJoined", JSON.stringify(obj));
 
     socket.on("disconnecting", async (reason, res) => {
       for (const room of socket.rooms) {

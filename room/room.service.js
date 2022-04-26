@@ -70,6 +70,17 @@ async function joinRoom(params, socketId) {
     room.updated = Date.now();
     await room.save();
 
+    // const users = await db.Account.find({'playerId': {$in: room["playerIds"]}});
+    
+    // const obj = {
+    //   "joinedPlayers": users,
+    //   "hostId": room.hostId,
+    //   "roomId": room.roomId,
+    //   "roomType": room.roomType,
+    //   "amount": room.amount
+    // }
+    // console.log(obj);
+
     // const users = await db.Account.find({'playerId': {$in: room["playerIds"]}}, '-_id playerId playerName profilePictureId');
     // // Object.assign(...users); 
     // console.log(users);

@@ -46,8 +46,16 @@ io.on("connection", async (socket) => {
     const res = await createRoom(JSON.parse(room), socket.id);
     socket.join(res.roomId);
     const account = await db.Account.findOne({ socketId : socket.id });
-    io.to(res.roomId).emit("roomCreated", JSON.stringify(res));
+    const obj = {
+      "joinedPlayers": account,
+      "hostId": res.hostId,
+      "roomId": res.roomId,
+      "roomType": res.roomType,
+      "amount": res.amount
+    }
+    io.to(res.roomId).emit("roomCreated", JSON.stringify(obj));
     io.to(res.roomId).emit("newMember", JSON.stringify(account));
+
     socket.on("disconnecting", async (reason, res) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {

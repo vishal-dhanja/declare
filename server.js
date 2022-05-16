@@ -60,8 +60,15 @@ io.on("connection", async (socket) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {
           const account = await db.Account.findOne({ socketId : socket.id });
+          const room = await db.Room.findOne({ playerIds: account.playerId });
+          console.log(room);
           const res = await exitRoom(socket.id);
-          io.to(room).emit("user has left", `(${account.playerId}) has left the Game`);
+          console.log(res);
+          if (account.playerId !== room.hostId){
+          io.emit("userLeft", `${account.playerId}`);
+        } else{
+          io.emit("userLeft", `${account.playerId}?${res.hostId}`);
+        }
           socket.leave(room);
         }
       }
@@ -78,7 +85,6 @@ io.on("connection", async (socket) => {
         `A new player (${account.playerName}) has Joined the Game`
       );
     
-    console.log(account);
     const users = await db.Account.find({'playerId': {$in: res["playerIds"]}});
     
     const obj = {
@@ -88,16 +94,26 @@ io.on("connection", async (socket) => {
       "roomType": res.roomType,
       "amount": res.amount
     }
-    console.log(obj);
     socket.broadcast.emit("newMember", JSON.stringify(account));
     io.to(socket.id).emit("playerJoined", JSON.stringify(obj));
+
+    socket.on("StartGame", async (payload) => {
+      io.emit("GameStarted", payload);
+    })
 
     socket.on("disconnecting", async (reason, res) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {
           const account = await db.Account.findOne({ socketId : socket.id });
+          const room = await db.Room.findOne({ playerIds: account.playerId });
+          console.log(room);
           const res = await exitRoom(socket.id);
-          io.to(room).emit("user has left", `(${account.playerId}) has left the Game`);
+          console.log(res);
+          if (account.playerId !== room.hostId){
+          io.emit("userLeft", `${account.playerId}`);
+          }else{
+          io.emit("userLeft", `${account.playerId}?${res.hostId}`);
+          }
           socket.leave(room);
         }
       }

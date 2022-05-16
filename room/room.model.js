@@ -5,7 +5,7 @@ const autoIncrement = require("mongoose-auto-increment");
 
 const schema = new Schema({  
   playerIds: [{ type: Number, required: true }],  
-  hostId: { type: String },
+  hostId: { type: Number },
   roomId: { type: Number, default: 100 },
   roomType: { type: Number, required: true },
   amount: { type: Number, required: true },

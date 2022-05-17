@@ -56,14 +56,19 @@ io.on("connection", async (socket) => {
     io.to(res.roomId).emit("roomCreated", JSON.stringify(obj));
     io.to(res.roomId).emit("newMember", JSON.stringify(account));
 
+    socket.on("StartGame", async (obj) => {
+      const newobj = JSON.parse(obj);
+      io.to(newobj.RoomId).emit("GameStarted", JSON.stringify(newobj.Payload));
+    })
+
     socket.on("disconnecting", async (reason, res) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {
           const account = await db.Account.findOne({ socketId : socket.id });
           const room = await db.Room.findOne({ playerIds: account.playerId });
-          console.log(room);
+          // console.log(room);
           const res = await exitRoom(socket.id);
-          console.log(res);
+          // console.log(res);
           if (account.playerId !== room.hostId){
           io.emit("userLeft", `${account.playerId}`);
         } else{
@@ -97,18 +102,14 @@ io.on("connection", async (socket) => {
     socket.broadcast.emit("newMember", JSON.stringify(account));
     io.to(socket.id).emit("playerJoined", JSON.stringify(obj));
 
-    socket.on("StartGame", async (payload) => {
-      io.emit("GameStarted", payload);
-    })
-
     socket.on("disconnecting", async (reason, res) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {
           const account = await db.Account.findOne({ socketId : socket.id });
           const room = await db.Room.findOne({ playerIds: account.playerId });
-          console.log(room);
+          // console.log(room);
           const res = await exitRoom(socket.id);
-          console.log(res);
+          // console.log(res);
           if (account.playerId !== room.hostId){
           io.emit("userLeft", `${account.playerId}`);
           }else{

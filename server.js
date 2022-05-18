@@ -61,6 +61,12 @@ io.on("connection", async (socket) => {
       io.to(newobj.RoomId).emit("GameStarted", JSON.stringify(newobj.Payload));
     })
 
+    socket.on("SendDeck", async (obj) => {
+      const newobj = JSON.parse(obj);
+      console.log(newobj);
+      io.to(newobj.RoomId).emit("ReceiveCard", JSON.stringify(newobj.Payload));
+    })
+
     socket.on("disconnecting", async (reason, res) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {

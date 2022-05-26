@@ -57,13 +57,18 @@ io.on("connection", async (socket) => {
     io.to(res.roomId).emit("newMember", JSON.stringify(account));
 
     socket.on("StartGame", async (obj) => {
+      
+      console.log(obj);
       const newobj = JSON.parse(obj);
-      io.to(newobj.RoomId).emit("GameStarted", JSON.stringify(newobj.Payload));
+      // console.log(newobj);
+      // console.log(newobj.RoomId);
+      // console.log(newobj.TurnAllocation);
+      // console.log(newobj.TurnAllocation.turnAllocationList.length);
+      io.to(newobj.RoomId).emit("GameStarted", JSON.stringify(newobj.TurnAllocation));
     })
 
     socket.on("SendDeck", async (obj) => {
       const newobj = JSON.parse(obj);
-      console.log(newobj);
       io.to(newobj.RoomId).emit("ReceiveCard", JSON.stringify(newobj.Payload));
     })
 
